@@ -230,7 +230,7 @@ def window_char_up(startchar):
             return hits
         if bs:
             break;
-
+    
 def window_char_down(startchar):
     for row in reversed(range(0,len(buffer[0]))):
         bs=0
@@ -277,28 +277,56 @@ def resize_window(a, x, y):
 def move_window_s(a, place):
     """Move window into semantic place (topleft, topright, bottomleft, bottomright, center)"""
     global desktop_geo
-    if place == "left":
-        cmd = ["xdotool", "windowmove", a["wid"], "0", "0"]
+    paddingx = 5
+    paddingy = 30
+
+    if place == "center":
+        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx*5), str(paddingy)]
         decoded = subprocess.check_output(cmd).decode("utf-8")
 
-        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2), str(desktop_geo[1])]
-        decoded = subprocess.check_output(cmd).decode("utf-8")
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]-paddingx*10), str(desktop_geo[1]-paddingy*1.5)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")     
         
-        pass
+    if place == "left":
+        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx), str(paddingy)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx), str(desktop_geo[1]-paddingy)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")     
+
     if place == "right":
+        cmd = ["xdotool", "windowmove", a["wid"], str(desktop_geo[0]/2-paddingx), str(paddingy)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx), str(desktop_geo[1]-paddingy)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")     
+
         pass
     if place == "bottom":
         pass
     if place == "top":
         pass
     if place == "topleft":
-        pass
+
+        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx), str(paddingy)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx*5), str(desktop_geo[1]/2-paddingy*1.5)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")     
+
     if place == "topright":
         pass
     if place == "bottomright":
         pass
     if place == "bottomleft":
-        pass
+
+        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx), str(desktop_geo[1]/2)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx*5), str(desktop_geo[1]/2)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")     
+
+
     
 def xprop_populate():
     global w
@@ -338,7 +366,8 @@ def xprop_populate():
             i['is_selected'] = 0
 
     return infos
-
+def set_transparency(w,val):
+    pass
 def read_conf(filename):
  """
  Keyword Arguments:
@@ -382,6 +411,8 @@ def retile():
     if current_desktop_in_use == -1:
         print("warning: unknown current desktop cardinal (error reading xprop output)")
         return -4;
+
+   
     
     # First, see if the current desktop is mentioned in layouts.conf:   
     for i in config_p.sections():
@@ -390,9 +421,18 @@ def retile():
             # 1.) go through the stack of current windows
             # 2.) if in layout, implement, if not, set transparency and keep going
             for c,value in enumerate(infos):
+                desired_pos = None
                 if value['title'] in config_p[current_desktop_in_use]:
-                    # implement it
-                        move_window_s(value, "left")
+                    # implement it 
+                    desired_pos = config_p[current_desktop_in_use].get(value["title"])
+                if not desired_pos :
+                    # TODO minimize or shade ? transparency? 
+                    continue;
+                else:
+                    print("moving", value["title"], "to ", desired_pos);
+                    if value["is_selected"]:
+                        in_stacked_layer_selected = True
+                    move_window_s(value, desired_pos);
                # else: print("no", value["title"])
 
 
