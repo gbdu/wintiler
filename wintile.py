@@ -34,6 +34,8 @@ known_symbols = {}
 config_p = None
 desktop_names_in_use = []
 current_desktop_in_use = None
+stack = None
+infos = []
 
 def get_active_window():
     cmd = ["xdotool", "getactivewindow"]
@@ -169,7 +171,7 @@ def clamp(minimum, x, maximum):
 def populate_buffer(b,winfos):
     # b is a list of columns (which are lists of chars)
     # scan each window
-    print(desktop_geo)
+    print("loaded desktop geo and populated buffer", desktop_geo)
     for i in winfos:
         for col in range(int(i["absoluteupperleftx"]/scale),\
                          int(i["absoluteupperleftx"]/scale+i["width"]/scale)):
@@ -272,11 +274,16 @@ def resize_window(a, x, y):
     print(cmd)
     decoded = subprocess.check_output(cmd).decode("utf-8")
 
-def move_window(a, place):
- """
-Move window into semantic place (topleft, topright, bottomleft, bottomright, center) 
- """
+def move_window_s(a, place):
+    """Move window into semantic place (topleft, topright, bottomleft, bottomright, center)"""
+    global desktop_geo
     if place == "left":
+        cmd = ["xdotool", "windowmove", a["wid"], "0", "0"]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2), str(desktop_geo[1])]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+        
         pass
     if place == "right":
         pass
@@ -298,12 +305,14 @@ def xprop_populate():
     global desktop_geo
     global desktop_names_in_use
     global current_desktop_in_use
+    global stack
+    global infos
     
     xcmd = ["xprop", "-root"]
     xprop_output = subprocess.check_output(xcmd).decode("utf-8")
     desktop_geo = get_desktop_info(xprop_output)
     stack = get_client_stack(xprop_output)
-    infos = []
+    
 
 
     desktop_names_in_use = get_desktops(xprop_output)
@@ -358,14 +367,35 @@ def retile():
     '''retile entire desktop based on layouts.conf'''
     global config_p
     global current_desktop_in_use
+    global stack
+    global infos
+    
+    if not stack:
+        print("Error in stack");
+        return -1;
+    if not config_p:
+        print("error in reading config")
+        return -2;
+    if not current_desktop_in_use:
+        print("error in reading current desktop in use")
+        return -3;     
     if current_desktop_in_use == -1:
         print("warning: unknown current desktop cardinal (error reading xprop output)")
-        return
+        return -4;
+    
     # First, see if the current desktop is mentioned in layouts.conf:   
     for i in config_p.sections():
         if i == current_desktop_in_use:
             # ok, good, implement the layout
-        pass
+            # 1.) go through the stack of current windows
+            # 2.) if in layout, implement, if not, set transparency and keep going
+            for c,value in enumerate(infos):
+                if value['title'] in config_p[current_desktop_in_use]:
+                    # implement it
+                        move_window_s(value, "left")
+               # else: print("no", value["title"])
+
+
     
 if __name__ ==  "__main__":
     if len(sys.argv) == 1:
@@ -380,6 +410,7 @@ if __name__ ==  "__main__":
 
     if sys.argv[1]=="sort1":
         target_window_id = calc_affinity(window_char_up(selected_char))
+        retile();
     elif sys.argv[1]=="tile1":
         target_window_id = calc_affinity(window_char_down(selected_char))
     elif sys.argv[1]=="show":
