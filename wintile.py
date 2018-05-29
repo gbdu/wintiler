@@ -366,7 +366,11 @@ def xprop_populate():
             i['is_selected'] = 0
 
     return infos
+
 def set_transparency(w,val):
+    # cmd = ["transset-df -p --inc 0.2", "windowmove", a["wid"], str(paddingx), str(paddingy)]
+    # decoded = subprocess.check_output(cmd).decode("utf-8")
+
     pass
 def read_conf(filename):
  """
