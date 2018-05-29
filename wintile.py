@@ -15,22 +15,25 @@ import sys
 import os
 import subprocess
 import re
+import configparser
 
 from collections import Counter
 import operator
 
 # Config section:
 
-scale = 16
+scale = 16 # you can change this for a different "resolution"
 lastchar='A' # You can use something like awesome font icons here (as
              # unicode chars that the term understands) end of config
              # section
 
 # Globbals:
-
 selected_char = ""
 desktop_geo = None
 known_symbols = {}
+config_p = None
+desktop_names_in_use = []
+current_desktop_in_use = None
 
 def get_active_window():
     cmd = ["xdotool", "getactivewindow"]
@@ -74,7 +77,6 @@ def parse_winfo(linfo):
                         dinfo.update({k:int(val)})
     return dinfo
 
-
 def get_desktop_info(xprop_output):
     x = xprop_output.find("_NET_DESKTOP_GEOMETRY(CARDINAL)")
     if x != -1 :
@@ -103,7 +105,32 @@ def get_client_stack(xprop_output):
         else:
             print("could not find windows")
             exit(1)
-    
+            
+def get_desktops(xprop_output):
+
+    x = xprop_output.find("_NET_DESKTOP_NAMES(UTF8_STRING)")
+    if x != -1 :
+        xo = xprop_output[x:]
+        xx = xo.find("\n")
+        if xx != -1:
+            ds = xprop_output[x+33:x+xx]
+            dnames = []
+            for i in ds.split(","):
+                dnames.append(i.replace("\"","")[1:])
+            return dnames
+            
+def get_current_desktop(xprop_output,desktops):       
+    x = xprop_output.find("_NET_CURRENT_DESKTOP(CARDINAL)")
+    if x != -1 :
+        xo = xprop_output[x:]
+        xx = xo.find("\n")
+        if xx != -1:
+            ds = xprop_output[x+33:x+xx]
+            curr_c = int(ds)
+            return desktops[curr_c]
+        else:
+            return -1;
+            
 def get_window_info(win):
     cmd = ["xwininfo", "-id", "%s" % win]
 
@@ -114,15 +141,17 @@ def get_window_info(win):
     winfo_as_list = decoded.split('\n')
     return parse_winfo(winfo_as_list)
 
-
 def create_test_buffer(d=None):
-'''
-create diagramatic presentation of desktop of current desktop
-''' 
+    '''create diagramatic presentation of desktop of current desktop''' 
+    global desktop_geo
+
+    
     if not d:
         d = desktop_geo
 
     global scale
+    global w
+    global h
     #scale = 1
     w = int(d[0]/scale)
     h = int(d[1]/scale)
@@ -154,8 +183,6 @@ def populate_buffer(b,winfos):
                     rc = clamp(0, row-1, len(b[0])-1)
                     print("out of range (%d,%d), clamping to (%d,%d)" % (col-1, row-1, cc, rc))
                     
-
-
 def get_char_for(wid):
     global lastchar
     global known_symbols
@@ -179,8 +206,7 @@ def calc_affinity(l):
     for k,v in known_symbols.items():
         if k == target_symbol:
             return v;
-    
-    
+      
 def window_char_up(startchar):
     for row in range(0,len(buffer[0])):
         bs=0
@@ -225,19 +251,14 @@ def window_char_down(startchar):
         if bs:
             break;
 
-    
 def print_buff(buff):
     sbuff = ""
     for row in range(0,len(buff[0])):
         for col in range(0,len(buff)):
         #thefile.write("%c" % buff[col][row])
             sbuff += str(buff[col][row])
-        sbuff += "\n"
-    
+        sbuff += "\n"    
     print(sbuff)
-
-if len(sys.argv) == 1:
-    exit;
 
 def transposed(lists):
    if not lists: return []
@@ -246,64 +267,68 @@ def move_window(a, x, y):
     cmd = ["xdotool", "windowmove", a["wid"], str(x), str(y)]
     decoded = subprocess.check_output(cmd).decode("utf-8")
 
-
 def resize_window(a, x, y):
     cmd = ["xdotool", "windowsize", a["wid"], str(x), str(y) ]
     print(cmd)
     decoded = subprocess.check_output(cmd).decode("utf-8")
 
-
-def move_window():
+def move_window(a, place):
  """
 Move window into semantic place (topleft, topright, bottomleft, bottomright, center) 
  """
- pass
-
-
-xcmd = ["xprop", "-root"]
-xprop_output = subprocess.check_output(xcmd).decode("utf-8")
-
-desktop_geo = get_desktop_info(xprop_output)
-stack = get_client_stack(xprop_output)
-
-infos = []
-
-for i in stack:
-    winfo = get_window_info(i)
-    if(winfo["title"]=="xfce4-panel"):
-        continue
+    if place == "left":
+        pass
+    if place == "right":
+        pass
+    if place == "bottom":
+        pass
+    if place == "top":
+        pass
+    if place == "topleft":
+        pass
+    if place == "topright":
+        pass
+    if place == "bottomright":
+        pass
+    if place == "bottomleft":
+        pass
     
-    infos.append(winfo)
-
-#infos = infos[::-1]
-
-for i in infos:
-    i['char'] = get_char_for(i["wid"])
-    w = int(i['wid'], 16);
+def xprop_populate():
+    global w
+    global desktop_geo
+    global desktop_names_in_use
+    global current_desktop_in_use
     
-    if w == get_active_window():
-        i['is_selected'] = 1
-        selected_char = i['char']
-    else:
-        i['is_selected'] = 0
+    xcmd = ["xprop", "-root"]
+    xprop_output = subprocess.check_output(xcmd).decode("utf-8")
+    desktop_geo = get_desktop_info(xprop_output)
+    stack = get_client_stack(xprop_output)
+    infos = []
 
-#print(infos)
-#print(desktop_geo)
 
-buffer = create_test_buffer()
-populate_buffer(buffer, infos)
+    desktop_names_in_use = get_desktops(xprop_output)
+    current_desktop_in_use = get_current_desktop(xprop_output,desktop_names_in_use)
+    print(current_desktop_in_use)
+    for i in stack:
+        winfo = get_window_info(i)
+        if(winfo["title"]=="xfce4-panel"):
+            continue    
+        infos.append(winfo)
 
-if sys.argv[1]=="sort1":
-    target_window_id = calc_affinity(window_char_up(selected_char))
-elif sys.argv[1]=="tile1":
-    target_window_id = calc_affinity(window_char_down(selected_char))
-elif sys.argv[1]=="show":
-    print_buff(buffer)
-    exit(0)
-else:
-    print("unknown argument")
-    exit(1)
+    #infos = infos[::-1]
 
+    
+    for i in infos:
+        i['char'] = get_char_for(i["wid"])
+        w = int(i['wid'], 16);
+
+        if w == get_active_window():
+            i['is_selected'] = 1
+            selected_char = i['char']
+        else:
+            i['is_selected'] = 0
+
+    return infos
 
 def read_conf(filename):
  """
@@ -311,16 +336,60 @@ def read_conf(filename):
  filename -- filepath to the layouts.conf file
  synopsis: read the layouts.conf
  """
- 
-        
-    
-    
+     
 def swap_windows(a,b):
     move_window(a, b["absoluteupperleftx"], b["absoluteupperlefty"])
     move_window(b, a["absoluteupperleftx"], a["absoluteupperlefty"])
     resize_window(a, b["width"], b["height"])
     resize_window(b, a["width"], a["height"])
+def print_help():
+    print("unknown arguments, use: wintile.py tile1)");
     
+def read_config():
+    global config_p
+    
+    config_p = configparser.ConfigParser()
+    config_p.read("/home/garg/wintilepy/layouts.conf")
+    # TODO get rid of "garg" and replace with user name
+    print("read sections")
+    print(config_p.sections())
+    
+def retile():
+    '''retile entire desktop based on layouts.conf'''
+    global config_p
+    global current_desktop_in_use
+    if current_desktop_in_use == -1:
+        print("warning: unknown current desktop cardinal (error reading xprop output)")
+        return
+    # First, see if the current desktop is mentioned in layouts.conf:   
+    for i in config_p.sections():
+        if i == current_desktop_in_use:
+            # ok, good, implement the layout
+        pass
+    
+if __name__ ==  "__main__":
+    if len(sys.argv) == 1:
+        print("not enough arguments\n")
+        print_help()
+        exit;
+
+    read_config()
+    infos = xprop_populate()
+    buffer = create_test_buffer()
+    populate_buffer(buffer, infos)
+
+    if sys.argv[1]=="sort1":
+        target_window_id = calc_affinity(window_char_up(selected_char))
+    elif sys.argv[1]=="tile1":
+        target_window_id = calc_affinity(window_char_down(selected_char))
+    elif sys.argv[1]=="show":
+        print_buff(buffer)
+        exit(0)
+    else:
+        print_help()
+    exit(1)
+
+
 # if target_window_id:
 #     cmd = ["wmctrl", "-i", "-a", target_window_id]
 #     decoded = subprocess.check_output(cmd).decode("utf-8")
