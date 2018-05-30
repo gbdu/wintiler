@@ -45,6 +45,7 @@ def get_active_window():
 
 def parse_winfo(linfo):
     dinfo = {}
+    print(linfo)
     for i in linfo:
         if not i: continue
         nline = i.replace(" ","")
@@ -142,6 +143,20 @@ def get_window_info(win):
 
     winfo_as_list = decoded.split('\n')
     return parse_winfo(winfo_as_list)
+
+def get_wm_class(win):
+    cmd = ["xprop", "-id", "%s" % win["wid"]]
+    decoded = subprocess.check_output(cmd).decode("utf-8")
+
+    w = decoded.find("WM_CLASS(STRING)")
+    wn = decoded[w+18:].split("\n")[0]
+    wn = wn.split(",")[0]
+    wn = wn.replace("\"","")
+    wn = wn.replace(" ","")
+    
+
+    print("FFFFFF" , wn)
+    return wn
 
 def create_test_buffer(d=None):
     '''create diagramatic presentation of desktop of current desktop''' 
@@ -325,8 +340,6 @@ def move_window_s(a, place):
 
         cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx*5), str(desktop_geo[1]/2)]
         decoded = subprocess.check_output(cmd).decode("utf-8")     
-
-
     
 def xprop_populate():
     global w
@@ -396,7 +409,7 @@ def read_config():
     print("read sections")
     print(config_p.sections())
     
-def retile():
+def retile():   
     '''retile entire desktop based on layouts.conf'''
     global config_p
     global current_desktop_in_use
@@ -415,8 +428,6 @@ def retile():
     if current_desktop_in_use == -1:
         print("warning: unknown current desktop cardinal (error reading xprop output)")
         return -4;
-
-   
     
     # First, see if the current desktop is mentioned in layouts.conf:   
     for i in config_p.sections():
@@ -426,20 +437,20 @@ def retile():
             # 2.) if in layout, implement, if not, set transparency and keep going
             for c,value in enumerate(infos):
                 desired_pos = None
-                if value['title'] in config_p[current_desktop_in_use]:
+                wmname = get_wm_class(value)
+                if wmname in config_p[current_desktop_in_use]:
                     # implement it 
-                    desired_pos = config_p[current_desktop_in_use].get(value["title"])
+                    desired_pos = config_p[current_desktop_in_use].get(wmname)
                 if not desired_pos :
                     # TODO minimize or shade ? transparency? 
                     continue;
                 else:
-                    print("moving", value["title"], "to ", desired_pos);
+                    #print("moving", value, "to ", desired_pos);
+
                     if value["is_selected"]:
                         in_stacked_layer_selected = True
-                    move_window_s(value, desired_pos);
+                    move_window_s(value, desired_pos);            
                # else: print("no", value["title"])
-
-
     
 if __name__ ==  "__main__":
     if len(sys.argv) == 1:
