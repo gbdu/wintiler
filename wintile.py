@@ -451,19 +451,49 @@ def retile():
                     desired_pos = config_p[current_desktop_in_use].get(wmname)
                     #set_transparency(value,0)
                 if not desired_pos :
-                    # TODO minimize or shade ? transparency? 
+                    # TODO minimize or shade ? transparency?
+                    value.update(layer="float")
                     continue;
                 else:
                     #print("moving", value, "to ", desired_pos);
-
-                    if value["is_selected"]:
-                        in_stacked_layer_selected = True
-                    move_window_s(value, desired_pos);            
+                    value.update(layer="tiled")
+                    move_window_s(value, desired_pos);
                # else: print("no", value["title"])
-                if "othert" in config_p[current_desktop_in_use]:
-                  set_transparency(value,config_p[current_desktop_in_use].get("othert"))
+
+               # if "othert" in config_p[current_desktop_in_use]:
+               #    value.update(layer="tiled")
+               #    set_transparency(value,config_p[current_desktop_in_use].get("othert"))
+               #  print(value)
                    
+
+
+def set_transparencies():
+    global infos
+    in_layer = "tiled"
     
+    for i in infos:
+        if i['is_selected'] and i['layer'] == "float":
+            in_layer = "float"
+            break
+        if i['is_selected'] and i['layer'] == 'tiled':
+            in_layer = "tiled"
+            break
+
+    if in_layer == "float":
+        for i in infos:
+            if i['layer'] == "float":
+                set_transparency(i, 1)
+            else:
+                set_transparency(i, "0.8")
+    else:
+        for i in infos:
+            if i['layer'] == "tiled":
+                set_transparency(i, 1)
+            else:
+                set_transparency(i, "0.8")
+        
+            
+            
 if __name__ ==  "__main__":
     if len(sys.argv) == 1:
         print("not enough arguments\n")
@@ -477,7 +507,10 @@ if __name__ ==  "__main__":
 
     if sys.argv[1]=="sort1":
         target_window_id = calc_affinity(window_char_up(selected_char))
+        
         retile();
+        set_transparencies()
+        
     elif sys.argv[1]=="tile1":
         target_window_id = calc_affinity(window_char_down(selected_char))
     elif sys.argv[1]=="show":
