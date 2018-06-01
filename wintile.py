@@ -332,6 +332,12 @@ def move_window_s(a, place):
     if place == "topright":
         pass
     if place == "bottomright":
+        cmd = ["xdotool", "windowmove", a["wid"], str(desktop_geo[0]/2+paddingx*5), str(desktop_geo[1]/2+paddingy*1.5)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx*5), str(desktop_geo[1]/2-paddingy*1.5)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")     
+
         pass
     if place == "bottomleft":
 
@@ -381,10 +387,12 @@ def xprop_populate():
     return infos
 
 def set_transparency(w,val):
-    # cmd = ["transset-df -p --inc 0.2", "windowmove", a["wid"], str(paddingx), str(paddingy)]
-    # decoded = subprocess.check_output(cmd).decode("utf-8")
+    cmd = ["transset-df","-i",w['wid'], str(val)]
+    decoded = subprocess.check_output(cmd).decode("utf-8")
+    
+    print(cmd)
 
-    pass
+           
 def read_conf(filename):
  """
  Keyword Arguments:
@@ -435,12 +443,13 @@ def retile():
             # ok, good, implement the layout
             # 1.) go through the stack of current windows
             # 2.) if in layout, implement, if not, set transparency and keep going
-            for c,value in enumerate(infos):
+           for c,value in enumerate(infos):
                 desired_pos = None
                 wmname = get_wm_class(value)
                 if wmname in config_p[current_desktop_in_use]:
                     # implement it 
                     desired_pos = config_p[current_desktop_in_use].get(wmname)
+                    #set_transparency(value,0)
                 if not desired_pos :
                     # TODO minimize or shade ? transparency? 
                     continue;
@@ -451,6 +460,9 @@ def retile():
                         in_stacked_layer_selected = True
                     move_window_s(value, desired_pos);            
                # else: print("no", value["title"])
+                if "othert" in config_p[current_desktop_in_use]:
+                  set_transparency(value,config_p[current_desktop_in_use].get("othert"))
+                   
     
 if __name__ ==  "__main__":
     if len(sys.argv) == 1:
