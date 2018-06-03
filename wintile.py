@@ -61,6 +61,7 @@ def parse_winfo(linfo):
                 title = title.replace("\'", "")
                 dinfo.update(title=title)
                 dinfo.update(wid=wid)
+                dinfo.update(layer="float")
         else:
             el = i.strip().lower()
             if el.startswith("corners"):
@@ -289,17 +290,17 @@ def resize_window(a, x, y):
     print(cmd)
     decoded = subprocess.check_output(cmd).decode("utf-8")
 
-def move_window_s(a, place):
+def move_window_s(a, place, yratio = 0.5, xratio=0.5):
     """Move window into semantic place (topleft, topright, bottomleft, bottomright, center)"""
     global desktop_geo
     paddingx = 5
     paddingy = 30
 
     if place == "center":
-        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx*5), str(paddingy)]
+        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx*20), str(paddingy*4)]
         decoded = subprocess.check_output(cmd).decode("utf-8")
 
-        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]-paddingx*10), str(desktop_geo[1]-paddingy*1.5)]
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]-paddingx*40), str(desktop_geo[1]-paddingy*6)]
         decoded = subprocess.check_output(cmd).decode("utf-8")     
         
     if place == "left":
@@ -315,11 +316,17 @@ def move_window_s(a, place):
 
         cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx), str(desktop_geo[1]-paddingy)]
         decoded = subprocess.check_output(cmd).decode("utf-8")     
-
+ 
         pass
     if place == "bottom":
         pass
     if place == "top":
+        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx*5), str(paddingy)]
+        decoded = subprocess.check_output(cmd).decode("utf-8")
+
+        cmd = ["xdotool", "windowsize", a["wid"], str((desktop_geo[0]- paddingx*10)),str((desktop_geo[1]*yratio - paddingx*7))]
+        decoded = subprocess.check_output(cmd).decode("utf-8")     
+
         pass
     if place == "topleft":
 
@@ -332,7 +339,7 @@ def move_window_s(a, place):
     if place == "topright":
         pass
     if place == "bottomright":
-        cmd = ["xdotool", "windowmove", a["wid"], str(desktop_geo[0]/2+paddingx*5), str(desktop_geo[1]/2+paddingy*1.5)]
+        cmd = ["xdotool", "windowmove", a["wid"], str(desktop_geo[0]/2+paddingx*5), str(desktop_geo[1]/2 + paddingy)]
         decoded = subprocess.check_output(cmd).decode("utf-8")
 
         cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx*5), str(desktop_geo[1]/2-paddingy*1.5)]
@@ -341,10 +348,10 @@ def move_window_s(a, place):
         pass
     if place == "bottomleft":
 
-        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx), str(desktop_geo[1]/2)]
+        cmd = ["xdotool", "windowmove", a["wid"], str(paddingx), str(desktop_geo[1]/2+paddingy)]
         decoded = subprocess.check_output(cmd).decode("utf-8")
 
-        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx*5), str(desktop_geo[1]/2)]
+        cmd = ["xdotool", "windowsize", a["wid"], str(desktop_geo[0]/2-paddingx*5), str(desktop_geo[1]/2-paddingy*1.5)]
         decoded = subprocess.check_output(cmd).decode("utf-8")     
     
 def xprop_populate():
@@ -364,7 +371,7 @@ def xprop_populate():
 
     desktop_names_in_use = get_desktops(xprop_output)
     current_desktop_in_use = get_current_desktop(xprop_output,desktop_names_in_use)
-    print(current_desktop_in_use)
+    # print(current_desktop_in_use)
     for i in stack:
         winfo = get_window_info(i)
         if(winfo["title"]=="xfce4-panel"):
@@ -390,9 +397,7 @@ def set_transparency(w,val):
     cmd = ["transset-df","-i",w['wid'], str(val)]
     decoded = subprocess.check_output(cmd).decode("utf-8")
     
-    print(cmd)
-
-           
+    #print(cmd)         
 def read_conf(filename):
  """
  Keyword Arguments:
